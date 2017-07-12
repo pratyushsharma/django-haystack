@@ -219,18 +219,33 @@ class Elasticsearch2SearchBackend(ElasticsearchSearchBackend):
         if end_offset is not None:
             params['size'] = end_offset - start_offset
 
-        doc_id = get_identifier(model_instance)
+        doc_id = str(model_instance.socialprofile_id) 
 
         try:
             # More like this Query
             # https://www.elastic.co/guide/en/elasticsearch/reference/2.2/query-dsl-mlt-query.html
             mlt_query = {
                 'query': {
-                    'more_like_this': {
-                        'fields': [field_name],
-                        'like': [{
-                            "_id": doc_id
-                        }]
+                    "bool":{
+                        'must':{
+                            'more_like_this': {
+                                'fields': ["location", "tags","text"],
+                                'like': [ {
+                                  "_index" : "haystack",                                                                                                                             
+                                  "_type" : "modelresult",                                                                                                                           
+                                  "_id" : doc_id, 
+                                },],
+                                  "min_term_freq" : 1,
+                                   "max_query_terms" : 12
+                            },
+                        },
+                        'should':{
+                          "range": { "followers": { 
+                                          "gte": int(model_instance.followers*0.8),
+                                           "lt":int(model_instance.followers*1.5)
+                                        }
+                                   }
+                        },
                     }
                 }
             }
